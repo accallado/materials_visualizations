@@ -62,6 +62,16 @@ $('to').onclick = () => {
   function distinctNeighborGrains(k){
     const s=new Set(); for(const j of nb8(k)) if(G[j]) s.add(G[j]); return s.size;
   }
+  function channelScore(k){
+    if(G[k]) return 0;
+    const dg=distinctNeighborGrains(k);
+    let sn=0; for(const j of nb8(k)) if(G[j]) sn++;
+    return 2.2*Math.max(0,dg-1) + 0.18*sn;
+  }
+  function solidFraction(){
+    let n=0; for(let k=0;k<SZ;k++) if(G[k]) n++;
+    return n/SZ;
+  }
 
   function reset(){
     running=false; if(raf) cancelAnimationFrame(raf);
@@ -89,12 +99,24 @@ $('to').onclick = () => {
   // cell and subtracted from the other, so solute is not numerically created.
   function diffuseLiquid(field, strength){
     const old=field.slice(), delta=new Float32Array(SZ);
-    const f=Math.min(0.12, Math.max(0, strength*0.25));
+    const f=Math.min(0.10, Math.max(0, strength*0.22));
+    const drift=Math.min(0.045, Math.max(0.008, strength*0.08));
     for(let y=1;y<N-1;y++) for(let x=1;x<N-1;x++){
       const k=id(x,y); if(G[k]) continue;
-      const r=k+1, d=k+N;
-      if(!G[r]){ const flux=f*(old[r]-old[k]); delta[k]+=flux; delta[r]-=flux; }
-      if(!G[d]){ const flux=f*(old[d]-old[k]); delta[k]+=flux; delta[d]-=flux; }
+      for(const j of [k+1,k+N]){
+        if(G[j]) continue;
+        const flux=f*(old[j]-old[k]);
+        delta[k]+=flux; delta[j]-=flux;
+
+        // Weak conservative segregation drift toward more constrained
+        // interdendritic liquid (multi-grain channels / triple junctions).
+        const sk=channelScore(k), sj=channelScore(j), ds=sj-sk;
+        if(Math.abs(ds)>0.05){
+          const donor=ds>0?k:j, recv=ds>0?j:k;
+          const amount=Math.min(old[donor]*0.025, drift*Math.abs(ds)*old[donor]/8);
+          delta[donor]-=amount; delta[recv]+=amount;
+        }
+      }
     }
     for(let k=0;k<SZ;k++) if(!G[k]) field[k]=Math.max(0, old[k]+delta[k]);
   }
@@ -138,8 +160,15 @@ $('to').onclick = () => {
 
   function freeze(k, gid){
     const a=P(), cS=Sl[k], cP=Pl[k];
-    Ss[k]=a.ks*cS; Ps[k]=a.kp*cP;
-    const rejectS=(1-a.ks)*cS, rejectP=(1-a.kp)*cP;
+    const fs=solidFraction();
+    const ch=channelScore(k);
+    // Scheil-like rejection early, then increasing terminal trapping in the
+    // last interdendritic liquid so the final boundary network retains solute.
+    const trap=Math.max(0,Math.min(0.92,(fs-0.82)/0.18))*Math.min(1,ch/3.2);
+    const kS=a.ks+(1-a.ks)*trap;
+    const kP=a.kp+(1-a.kp)*trap;
+    Ss[k]=kS*cS; Ps[k]=kP*cP;
+    const rejectS=(1-kS)*cS, rejectP=(1-kP)*cP;
     G[k]=gid; Sl[k]=0; Pl[k]=0;
 
     let rec=nb8(k).filter(j=>!G[j]);
@@ -150,7 +179,8 @@ $('to').onclick = () => {
       for(const j of rec){
         // Prefer liquid cells already constrained by multiple grains:
         // those are the interdendritic / grain-boundary channels that freeze last.
-        const q=1 + 3.0*Math.max(0,distinctNeighborGrains(j)-1) + 0.18*solidNeighbors(j).length;
+        const dg=Math.max(0,distinctNeighborGrains(j)-1);
+        const q=1 + 7.0*dg*dg + 0.45*solidNeighbors(j).length + 1.8*channelScore(j);
         w.push(q); sum+=q;
       }
       rec.forEach((j,i)=>{ Sl[j]+=rejectS*w[i]/sum; Pl[j]+=rejectP*w[i]/sum; });
@@ -166,7 +196,7 @@ $('to').onclick = () => {
     const a=P();
     const sr=Math.max(1, Sl[k]/Math.max(1,a.s));
     const pr=Math.max(1, Pl[k]/Math.max(1,a.p));
-    return Tliq0 - 3.3*(sr-1) - 2.4*(pr-1);
+    return Tliq0 - 5.2*(sr-1) - 3.4*(pr-1);
   }
 
   function mc(){
@@ -187,7 +217,8 @@ $('to').onclick = () => {
       if(neigh.length){
         const enrichment=Sl[k]/Math.max(1,a.s);
         const soluteDrag=1/(1+0.035*Math.max(0,enrichment-1));
-        const boundarySlow=distinctNeighborGrains(k)>=2 ? 0.72 : 1.0;
+        const dg=distinctNeighborGrains(k);
+        const boundarySlow=dg>=3 ? 0.08 : (dg>=2 ? 0.22 : 1.0);
         const pGrow=Math.min(
           0.98,
           growthPrefactor*a.growth*soluteDrag*boundarySlow*(1-Math.exp(-undercool/growthScale))
@@ -236,7 +267,7 @@ $('to').onclick = () => {
       else if(mode==='temperature') c=cmap((T[k]-1240)/340);
       else {
         const r=ratio(k,mode);
-        c=cmap(Math.log2(1+Math.max(0,r))/Math.log2(13));
+        c=cmap(Math.log1p(Math.max(0,r-0.85))/Math.log(11.0));
       }
       d[k*4]=c[0]; d[k*4+1]=c[1]; d[k*4+2]=c[2]; d[k*4+3]=255;
     }
