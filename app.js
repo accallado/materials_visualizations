@@ -1,6 +1,302 @@
+const $ = window.$ = (id) => document.getElementById(id);
 
-const $ = window.$ = (i) => document.getElementById(i);$('ts').onclick=()=>{$('ts').classList.add('active');$('to').classList.remove('active');$('ps').classList.add('active');$('po').classList.remove('active')};$('to').onclick=()=>{$('to').classList.add('active');$('ts').classList.remove('active');$('po').classList.add('active');$('ps').classList.remove('active');setTimeout(()=>dispatchEvent(new Event('resize')),20)};
-(()=>{const C=$('sim'),X=C.getContext('2d',{alpha:false}),N=74,Z=N*N,T=new Float32Array(Z),G=new Int32Array(Z),SL=new Float32Array(Z),PL=new Float32Array(Z),SS=new Float32Array(Z),PS=new Float32Array(Z),QS=new Float32Array(Z),QP=new Float32Array(Z);let ng=1,kstep=0,on=false,last=0,raf;const id=(x,y)=>y*N+x,A=()=>({s:+$('s').value,p:+$('p').value,D:+$('d').value,dp:+$('dp').value,ks:+$('ks').value,kp:+$('kp').value,w:+$('wall').value,g:+$('g').value,n:+$('n').value,v:+$('speed').value});const n4=k=>{let x=k%N,y=k/N|0,o=[];if(x)o.push(k-1);if(x<N-1)o.push(k+1);if(y)o.push(k-N);if(y<N-1)o.push(k+N);return o},n8=k=>{let x=k%N,y=k/N|0,o=[];for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if(dx||dy){let X=x+dx,Y=y+dy;if(X>=0&&X<N&&Y>=0&&Y<N)o.push(id(X,Y))}return o},sn=k=>n8(k).filter(j=>G[j]),ln=k=>n8(k).filter(j=>!G[j]),dg=k=>new Set(n8(k).filter(j=>G[j]).map(j=>G[j])).size;
-function reset(){on=false;$('run').textContent='Run';let a=A();ng=1;kstep=0;for(let k=0;k<Z;k++){T[k]=1540;G[k]=0;SL[k]=a.s;PL[k]=a.p;SS[k]=PS[k]=QS[k]=QP[k]=0}draw();stats();$('status').textContent='Ready'}function heat(){let a=A(),o=T.slice();for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){let k=id(x,y);T[k]=o[k]+.16*(o[k-1]+o[k+1]+o[k-N]+o[k+N]-4*o[k])}for(let x=0;x<N;x++)T[x]=T[(N-1)*N+x]=a.w;for(let y=0;y<N;y++)T[y*N]=T[y*N+N-1]=a.w}
-function flush(){for(let k=0;k<Z;k++){if(!G[k]){SL[k]+=QS[k];PL[k]+=QP[k]}QS[k]=QP[k]=0}}function diff(f,D){let o=f.slice();for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){let k=id(x,y);if(G[k])continue;let s=0,n=0;for(let j of n4(k))if(!G[j]){s+=o[j];n++}if(n)f[k]=o[k]+D*(s/n-o[k])}}function sd(){let a=A();flush();for(let i=0;i<a.dp;i++){diff(SL,a.D);diff(PL,a.D)}}function freeze(k,gid){let a=A(),cs=SL[k],cp=PL[k];SS[k]=a.ks*cs;PS[k]=a.kp*cp;let rs=(1-a.ks)*cs,rp=(1-a.kp)*cp;G[k]=gid;SL[k]=PL[k]=0;let L=ln(k);if(L.length){let W=L.map(j=>1+2.6*Math.max(0,dg(j)-1)+.2*sn(j).length),S=W.reduce((x,y)=>x+y,0);L.forEach((j,i)=>{QS[j]+=rs*W[i]/S;QP[j]+=rp*W[i]/S})}else{SS[k]+=rs;PS[k]+=rp}T[k]+=7}function liq(k){let a=A(),sr=Math.max(1,SL[k]/a.s),pr=Math.max(1,PL[k]/a.p);return 1500-3.3*(sr-1)-2.4*(pr-1)}function mc(){heat();sd();let a=A(),c=[];for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++){let k=id(x,y);if(!G[k]&&sn(k).length)c.push(k)}for(let i=c.length-1;i>0;i--){let j=Math.random()*(i+1)|0;[c[i],c[j]]=[c[j],c[i]]}for(let q=0;q<Math.min(c.length,Z*.12|0);q++){let k=c[q],u=liq(k)-T[k];if(u<=0)continue;let S=sn(k),drag=1/(1+.035*Math.max(0,SL[k]/a.s-1)),slow=dg(k)>=2 ? .72 : 1,p=Math.min(.98,.55*a.g*drag*slow*(1-Math.exp(-u/15)));if(Math.random()<p)freeze(k,G[S[Math.random()*S.length|0]])}for(let q=0;q<Z*.03;q++){let k=id(1+Math.random()*(N-2)|0,1+Math.random()*(N-2)|0);if(G[k]||sn(k).length)continue;let u=liq(k)-T[k];if(u>8&&Math.random()<Math.min(.04,.0008*a.n*((u-8)/18)**2))freeze(k,ng++)}sd();kstep++}
-const cm=t=>{t=Math.max(0,Math.min(1,t));let S=[[16,30,92],[20,82,145],[23,150,168],[89,191,111],[218,207,65],[220,103,38],[190,47,30]],q=t*6,i=Math.min(5,q|0),f=q-i,a=S[i],b=S[i+1];return a.map((v,j)=>v+(b[j]-v)*f)},rat=(k,m)=>{let a=A();return m==='sulfur'?(G[k]?SS[k]/a.s:SL[k]/a.s):(G[k]?PS[k]/a.p:PL[k]/a.p)};function draw(){let m=$('view').value,I=X.createImageData(N,N),d=I.data;for(let k=0;k<Z;k++){let c=m==='grains'?(G[k]?[60+G[k]*53%190,80+G[k]*71%160,90+G[k]*97%150]:[15,20,27]):m==='phase'?(G[k]?[215,215,218]:[17,24,32]):m==='temperature'?cm((T[k]-1240)/340):cm(Math.log2(1+Math.max(0,rat(k,m)))/Math.log2(9));d[k*4]=c[0];d[k*4+1]=c[1];d[k*4+2]=c[2];d[k*4+3]=255}let o=document.createElement('canvas');o.width=N;o.height=N;o.getContext('2d').putImageData(I,0,0);X.imageSmoothingEnabled=false;X.drawImage(o,0,0,C.width,C.height);$('legend').textContent={grains:'Each color is one grain.',sulfur:'Sulfur concentration: enriched late-liquid channels appear brighter.',phosphorus:'Phosphorus concentration.',temperature:'Temperature field.',phase:'Light = solid; dark = liquid.'}[m]}function stats(){let a=A(),s=0,t=0,m=0;for(let k=0;k<Z;k++){if(G[k])s++;t+=T[k];m=Math.max(m,G[k]?SS[k]/a.s:SL[k]/a.s)}$('solid').textContent=(100*s/Z).toFixed(1)+'%';$('grains').textContent=ng-1;$('temp').textContent=(t/Z).toFixed(0)+' °C';$('peak').textContent=m.toFixed(1)+'×';$('st').textContent=kstep;$('status').textContent=on?'Running':s/Z>.995?'Essentially solid':'Paused'}function loop(ts){if(!on)return;if(ts-last>32){for(let i=0;i<A().v;i++)mc();draw();stats();last=ts}raf=requestAnimationFrame(loop)}$('run').onclick=()=>{on=!on;$('run').textContent=on?'Pause':'Run';if(on){last=0;raf=requestAnimationFrame(loop)}else cancelAnimationFrame(raf)};$('step').onclick=()=>{if(!on){mc();draw();stats()}};$('reset').onclick=reset;$('view').onchange=draw;[['speed','speedV',v=>v+'×'],['s','sV',v=>v+' ppm'],['p','pV',v=>v+' ppm'],['d','dV',v=>(+v).toFixed(2)],['dp','dpV',v=>v],['ks','ksV',v=>(+v).toFixed(2)],['kp','kpV',v=>(+v).toFixed(2)],['wall','wallV',v=>v+' °C'],['g','gV',v=>(+v).toFixed(1)+'×'],['n','nV',v=>(+v).toFixed(1)+'×']].forEach(([a,b,f])=>{$(a).oninput=()=>$(b).textContent=f($(a).value);if(a!=='speed')$(a).onchange=reset});reset()})();
+$('ts').onclick = () => {
+  $('ts').classList.add('active'); $('to').classList.remove('active');
+  $('ps').classList.add('active'); $('po').classList.remove('active');
+};
+$('to').onclick = () => {
+  $('to').classList.add('active'); $('ts').classList.remove('active');
+  $('po').classList.add('active'); $('ps').classList.remove('active');
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 20);
+};
+
+(() => {
+  const cv = $('sim');
+  const ctx = cv.getContext('2d', {alpha:false});
+
+  // Core model constants restored from the fuller Monte Carlo version.
+  const N = 90, SZ = N * N;
+  const T0 = 1540, Tliq0 = 1500, alpha = 0.17;
+  const latentHeat = 7.0;
+  const attemptsPerStep = Math.floor(0.75 * SZ);
+  const nucleationPrefactor = 0.0018;
+  const growthPrefactor = 0.40;
+  const criticalUndercooling = 7.0;
+  const growthScale = 18.0;
+
+  const T  = new Float32Array(SZ);
+  const G  = new Int32Array(SZ);
+  const Sl = new Float32Array(SZ);
+  const Pl = new Float32Array(SZ);
+  const Ss = new Float32Array(SZ);
+  const Ps = new Float32Array(SZ);
+  const orient = [0];
+
+  let nextG = 1, stepN = 0, running = false, raf = null, last = 0;
+
+  const id = (x,y) => y*N+x;
+  const P = () => ({
+    s:+$('s').value, p:+$('p').value, D:+$('d').value, passes:+$('dp').value,
+    ks:+$('ks').value, kp:+$('kp').value, wall:+$('wall').value,
+    growth:+$('g').value, nuc:+$('n').value, speed:+$('speed').value
+  });
+
+  function nb4(k){
+    const x=k%N, y=(k/N)|0, out=[];
+    if(x>0) out.push(k-1); if(x<N-1) out.push(k+1);
+    if(y>0) out.push(k-N); if(y<N-1) out.push(k+N);
+    return out;
+  }
+  function nb8(k){
+    const x=k%N, y=(k/N)|0, out=[];
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      if(!dx && !dy) continue;
+      const X=x+dx, Y=y+dy;
+      if(X>=0 && X<N && Y>=0 && Y<N) out.push(id(X,Y));
+    }
+    return out;
+  }
+  function solidNeighbors(k){
+    const out=[]; for(const j of nb8(k)) if(G[j]) out.push(j); return out;
+  }
+  function distinctNeighborGrains(k){
+    const s=new Set(); for(const j of nb8(k)) if(G[j]) s.add(G[j]); return s.size;
+  }
+
+  function reset(){
+    running=false; if(raf) cancelAnimationFrame(raf);
+    $('run').textContent='Run';
+    const a=P();
+    nextG=1; stepN=0; orient.length=1;
+    for(let k=0;k<SZ;k++){
+      T[k]=T0 + (Math.random()-.5)*0.5;
+      G[k]=0; Sl[k]=a.s; Pl[k]=a.p; Ss[k]=0; Ps[k]=0;
+    }
+    draw(); stats(); $('status').textContent='Ready';
+  }
+
+  function diffuseTemperature(){
+    const a=P(), old=T.slice();
+    for(let y=1;y<N-1;y++) for(let x=1;x<N-1;x++){
+      const k=id(x,y);
+      T[k]=old[k]+alpha*(old[k-1]+old[k+1]+old[k-N]+old[k+N]-4*old[k]);
+    }
+    for(let x=0;x<N;x++){ T[x]=a.wall; T[(N-1)*N+x]=a.wall; }
+    for(let y=0;y<N;y++){ T[y*N]=a.wall; T[y*N+N-1]=a.wall; }
+  }
+
+  // Conservative pairwise diffusion: every liquid-liquid flux is added to one
+  // cell and subtracted from the other, so solute is not numerically created.
+  function diffuseLiquid(field, strength){
+    const old=field.slice(), delta=new Float32Array(SZ);
+    const f=Math.min(0.12, Math.max(0, strength*0.25));
+    for(let y=1;y<N-1;y++) for(let x=1;x<N-1;x++){
+      const k=id(x,y); if(G[k]) continue;
+      const r=k+1, d=k+N;
+      if(!G[r]){ const flux=f*(old[r]-old[k]); delta[k]+=flux; delta[r]-=flux; }
+      if(!G[d]){ const flux=f*(old[d]-old[k]); delta[k]+=flux; delta[d]-=flux; }
+    }
+    for(let k=0;k<SZ;k++) if(!G[k]) field[k]=Math.max(0, old[k]+delta[k]);
+  }
+  function diffuseSolute(){
+    const a=P();
+    for(let r=0;r<a.passes;r++){ diffuseLiquid(Sl,a.D); diffuseLiquid(Pl,a.D); }
+  }
+
+  function nearestLiquidRecipients(k){
+    let frontier=[k], seen=new Uint8Array(SZ); seen[k]=1;
+    for(let radius=1; radius<=5; radius++){
+      const next=[], found=[];
+      for(const q of frontier){
+        for(const j of nb8(q)){
+          if(seen[j]) continue; seen[j]=1;
+          if(!G[j]) found.push(j); else next.push(j);
+        }
+      }
+      if(found.length) return found;
+      frontier=next;
+      if(!frontier.length) break;
+    }
+    return [];
+  }
+
+  function chooseGrowthGrain(k, neigh){
+    const x=k%N, y=(k/N)|0, weights=[], gids=[];
+    let total=0;
+    for(const j of neigh){
+      const gid=G[j], jx=j%N, jy=(j/N)|0;
+      const theta=Math.atan2(y-jy,x-jx);
+      const o=orient[gid] || 0;
+      const anis=0.72 + 0.28*Math.abs(Math.cos(4*(theta-o)));
+      const w=anis*(1 + 0.12*neigh.filter(q=>G[q]===gid).length);
+      gids.push(gid); weights.push(w); total+=w;
+    }
+    let r=Math.random()*total;
+    for(let i=0;i<weights.length;i++){ r-=weights[i]; if(r<=0) return gids[i]; }
+    return gids[gids.length-1];
+  }
+
+  function freeze(k, gid){
+    const a=P(), cS=Sl[k], cP=Pl[k];
+    Ss[k]=a.ks*cS; Ps[k]=a.kp*cP;
+    const rejectS=(1-a.ks)*cS, rejectP=(1-a.kp)*cP;
+    G[k]=gid; Sl[k]=0; Pl[k]=0;
+
+    let rec=nb8(k).filter(j=>!G[j]);
+    if(!rec.length) rec=nearestLiquidRecipients(k);
+
+    if(rec.length){
+      const w=[]; let sum=0;
+      for(const j of rec){
+        // Prefer liquid cells already constrained by multiple grains:
+        // those are the interdendritic / grain-boundary channels that freeze last.
+        const q=1 + 3.0*Math.max(0,distinctNeighborGrains(j)-1) + 0.18*solidNeighbors(j).length;
+        w.push(q); sum+=q;
+      }
+      rec.forEach((j,i)=>{ Sl[j]+=rejectS*w[i]/sum; Pl[j]+=rejectP*w[i]/sum; });
+    } else {
+      // Only true for the final isolated liquid: its remaining solute is trapped
+      // when it finally solidifies.
+      Ss[k]+=rejectS; Ps[k]+=rejectP;
+    }
+    T[k]+=latentHeat;
+  }
+
+  function localLiquidus(k){
+    const a=P();
+    const sr=Math.max(1, Sl[k]/Math.max(1,a.s));
+    const pr=Math.max(1, Pl[k]/Math.max(1,a.p));
+    return Tliq0 - 3.3*(sr-1) - 2.4*(pr-1);
+  }
+
+  function mc(){
+    diffuseTemperature();
+    diffuseSolute();
+    const a=P();
+
+    for(let attempt=0; attempt<attemptsPerStep; attempt++){
+      const x=1+(Math.random()*(N-2)|0);
+      const y=1+(Math.random()*(N-2)|0);
+      const k=id(x,y);
+      if(G[k]) continue;
+
+      const undercool=localLiquidus(k)-T[k];
+      if(undercool<=0) continue;
+
+      const neigh=solidNeighbors(k);
+      if(neigh.length){
+        const enrichment=Sl[k]/Math.max(1,a.s);
+        const soluteDrag=1/(1+0.035*Math.max(0,enrichment-1));
+        const boundarySlow=distinctNeighborGrains(k)>=2 ? 0.72 : 1.0;
+        const pGrow=Math.min(
+          0.98,
+          growthPrefactor*a.growth*soluteDrag*boundarySlow*(1-Math.exp(-undercool/growthScale))
+        );
+        if(Math.random()<pGrow){
+          freeze(k, chooseGrowthGrain(k,neigh));
+        }
+      } else if(undercool>criticalUndercooling){
+        const z=(undercool-criticalUndercooling)/20;
+        const pNuc=Math.min(0.15, nucleationPrefactor*a.nuc*z*z);
+        if(Math.random()<pNuc){
+          orient[nextG]=Math.random()*Math.PI/2;
+          freeze(k,nextG++);
+        }
+      }
+    }
+
+    diffuseSolute();
+    stepN++;
+  }
+
+  const palette=[
+    [57,106,177],[218,124,48],[62,150,81],[204,37,41],[107,76,154],[146,36,40],
+    [83,81,84],[148,139,61],[0,154,205],[255,128,14],[95,158,209],[237,151,202]
+  ];
+  function cmap(t){
+    t=Math.max(0,Math.min(1,t));
+    const stops=[[16,30,92],[20,82,145],[23,150,168],[89,191,111],[218,207,65],[220,103,38],[190,47,30]];
+    const q=t*(stops.length-1), i=Math.min(stops.length-2,Math.floor(q)), f=q-i;
+    const A=stops[i], B=stops[i+1];
+    return [A[0]+(B[0]-A[0])*f,A[1]+(B[1]-A[1])*f,A[2]+(B[2]-A[2])*f];
+  }
+  function ratio(k,type){
+    const a=P();
+    return type==='sulfur'
+      ? (G[k]?Ss[k]/Math.max(1,a.s):Sl[k]/Math.max(1,a.s))
+      : (G[k]?Ps[k]/Math.max(1,a.p):Pl[k]/Math.max(1,a.p));
+  }
+
+  function draw(){
+    const mode=$('view').value, img=ctx.createImageData(N,N), d=img.data;
+    for(let k=0;k<SZ;k++){
+      let c;
+      if(mode==='grains') c=G[k]?palette[(G[k]-1)%palette.length]:[15,20,27];
+      else if(mode==='phase') c=G[k]?[214,214,218]:[17,24,32];
+      else if(mode==='temperature') c=cmap((T[k]-1240)/340);
+      else {
+        const r=ratio(k,mode);
+        c=cmap(Math.log2(1+Math.max(0,r))/Math.log2(13));
+      }
+      d[k*4]=c[0]; d[k*4+1]=c[1]; d[k*4+2]=c[2]; d[k*4+3]=255;
+    }
+    const off=document.createElement('canvas');
+    off.width=N; off.height=N;
+    off.getContext('2d').putImageData(img,0,0);
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(off,0,0,cv.width,cv.height);
+    $('legend').textContent={
+      grains:'Each color is one grain. Growth includes a weak cubic orientation anisotropy.',
+      sulfur:'Sulfur concentration. Dark grain interiors contrast with enriched connected late-liquid channels and junctions.',
+      phosphorus:'Phosphorus concentration using the same connected-liquid partition/diffusion model.',
+      temperature:'Temperature field with wall cooling, thermal diffusion and latent-heat feedback.',
+      phase:'Light = solid; dark = liquid.'
+    }[mode];
+  }
+
+  function stats(){
+    const a=P(); let solid=0,sumT=0,peakS=0;
+    for(let k=0;k<SZ;k++){
+      if(G[k]) solid++;
+      sumT+=T[k];
+      peakS=Math.max(peakS,G[k]?Ss[k]/Math.max(1,a.s):Sl[k]/Math.max(1,a.s));
+    }
+    $('solid').textContent=(100*solid/SZ).toFixed(1)+'%';
+    $('grains').textContent=nextG-1;
+    $('temp').textContent=(sumT/SZ).toFixed(0)+' °C';
+    $('peak').textContent=peakS.toFixed(1)+'×';
+    $('st').textContent=stepN;
+    $('status').textContent=running?'Running':solid/SZ>.995?'Essentially solid':'Paused';
+  }
+
+  function loop(ts){
+    if(!running) return;
+    if(ts-last>32){
+      const n=P().speed;
+      for(let i=0;i<n;i++) mc();
+      draw(); stats(); last=ts;
+    }
+    raf=requestAnimationFrame(loop);
+  }
+
+  $('run').onclick=()=>{
+    running=!running; $('run').textContent=running?'Pause':'Run';
+    if(running){ last=0; raf=requestAnimationFrame(loop); }
+    else if(raf) cancelAnimationFrame(raf);
+  };
+  $('step').onclick=()=>{ if(!running){ mc(); draw(); stats(); } };
+  $('reset').onclick=reset;
+  $('view').onchange=draw;
+
+  [
+    ['speed','speedV',v=>v+'×'],['s','sV',v=>v+' ppm'],['p','pV',v=>v+' ppm'],
+    ['d','dV',v=>(+v).toFixed(2)],['dp','dpV',v=>v],['ks','ksV',v=>(+v).toFixed(2)],
+    ['kp','kpV',v=>(+v).toFixed(2)],['wall','wallV',v=>v+' °C'],
+    ['g','gV',v=>(+v).toFixed(1)+'×'],['n','nV',v=>(+v).toFixed(1)+'×']
+  ].forEach(([a,b,f])=>{
+    $(a).oninput=()=>$(b).textContent=f($(a).value);
+    if(a!=='speed') $(a).onchange=reset;
+  });
+
+  reset();
+})();
